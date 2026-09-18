@@ -271,7 +271,6 @@ class _DefaultProgress extends StatelessWidget {
 class _OvalStepProgressPainter extends CustomPainter {
   static const double _strokeWidth = 6;
   static const double _inflateBy = 12;
-  static const double _gapFraction = 0.22;
 
   final double progress;
   final int total;
@@ -289,31 +288,33 @@ class _OvalStepProgressPainter extends CustomPainter {
 
     final rect = faceOvalRect(size).inflate(_inflateBy);
     final sweepPerStep = (math.pi * 2) / total;
-    final gap = math.min(0.2, sweepPerStep * _gapFraction);
-    final sweep = sweepPerStep - gap;
 
     final trackPaint = Paint()
       ..color = color.withValues(alpha: 0.22)
       ..style = PaintingStyle.stroke
       ..strokeWidth = _strokeWidth
-      ..strokeCap = StrokeCap.round
+      ..strokeCap = StrokeCap.butt
       ..isAntiAlias = true;
 
     final fillPaint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = _strokeWidth
-      ..strokeCap = StrokeCap.round
+      ..strokeCap = StrokeCap.butt
       ..isAntiAlias = true;
 
-    for (var i = 0; i < total; i++) {
-      final start = -math.pi / 2 + i * sweepPerStep + gap / 2;
-      canvas.drawArc(rect, start, sweep, false, trackPaint);
+    canvas.drawOval(rect, trackPaint);
 
+    for (var i = 0; i < total; i++) {
       final filled = (progress - i).clamp(0.0, 1.0);
-      if (filled > 0) {
-        canvas.drawArc(rect, start, sweep * filled, false, fillPaint);
-      }
+      if (filled <= 0) continue;
+      canvas.drawArc(
+        rect,
+        -math.pi / 2 + i * sweepPerStep,
+        sweepPerStep * filled,
+        false,
+        fillPaint,
+      );
     }
   }
 
