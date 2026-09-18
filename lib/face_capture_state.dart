@@ -24,6 +24,7 @@ class FaceCaptureState {
   final List<CapturedFaceImage> captured;
   final bool faceDetected;
   final String? errorMessage;
+  final double holdProgress;
 
   const FaceCaptureState({
     this.phase = FaceCapturePhase.initializing,
@@ -31,6 +32,8 @@ class FaceCaptureState {
     this.currentStepIndex = 0,
     this.captured = const [],
     this.faceDetected = false,
+    this.holdProgress = 0.0, // ADD THIS LINE
+
     this.errorMessage,
   });
 
@@ -38,6 +41,8 @@ class FaceCaptureState {
     FaceCapturePhase? phase,
     CameraController? cameraController,
     int? currentStepIndex,
+    double? holdProgress, // ADD THIS PARAM
+
     List<CapturedFaceImage>? captured,
     bool? faceDetected,
     String? errorMessage,
@@ -48,6 +53,8 @@ class FaceCaptureState {
       currentStepIndex: currentStepIndex ?? this.currentStepIndex,
       captured: captured ?? this.captured,
       faceDetected: faceDetected ?? this.faceDetected,
+      holdProgress: holdProgress ?? this.holdProgress, // ADD THIS LINE
+
       errorMessage: errorMessage, // deliberately NOT defaulted — see note below
     );
   }

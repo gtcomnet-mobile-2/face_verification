@@ -25,32 +25,42 @@ class FacePoseStep {
   static List<FacePoseStep> defaultSteps() => const [
     FacePoseStep(
       pose: FacePose.straight,
-      
+      assetIcon: 'assets/front.gif',
       instruction: 'Look straight into the camera',
       icon: Icons.camera_alt,
     ),
     FacePoseStep(
       pose: FacePose.left,
+      assetIcon: 'assets/left.gif',
+
       instruction: 'Slowly turn your head left',
       icon: Icons.arrow_left,
     ),
     FacePoseStep(
       pose: FacePose.right,
+      assetIcon: 'assets/right.gif',
+
       instruction: 'Slowly turn your head right',
       icon: Icons.arrow_right,
     ),
     FacePoseStep(
       pose: FacePose.up,
+      assetIcon: 'assets/up.gif',
+
       instruction: 'Tilt your head up',
       icon: Icons.arrow_upward,
     ),
     FacePoseStep(
       pose: FacePose.down,
+      assetIcon: 'assets/down.gif',
+
       instruction: 'Tilt your head down',
       icon: Icons.arrow_downward,
     ),
     FacePoseStep(
       pose: FacePose.smile,
+      assetIcon: 'assets/smile.gif',
+
       instruction: 'Give us a smile',
       icon: Icons.sentiment_satisfied,
     ),

@@ -191,13 +191,9 @@ class _CaptureBody extends StatelessWidget {
           bottom: 200,
           left: 24,
           right: 24,
-          child: Transform.translate(
-            offset: Offset(9, 1),
-            // angle: 90,
-            child:
-                config.instructionBuilder?.call(context, step) ??
-                Icon(step.icon, color: Colors.black, size: 48),
-          ),
+          child:
+              config.instructionBuilder?.call(context, step) ??
+              Image.asset(step.assetIcon!, width: 100, height: 100),
         ),
 
         // Instruction (fully replaceable)
@@ -285,7 +281,8 @@ class _DefaultInstruction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // getVoices();
-
+    // final player = AudioPlayer();
+    // await player.play(UrlSourc.com/my-a));
     tts.speak(text);
 
     return Container(
