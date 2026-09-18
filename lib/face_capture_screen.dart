@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:camera/camera.dart';
 import 'package:facetest/face_capture_config.dart';
 import 'package:facetest/face_capture_cubit.dart';
@@ -170,23 +172,25 @@ class _CaptureBody extends StatelessWidget {
         config.overlayBuilder?.call(context, state) ??
             DefaultFaceOverlay(state: state, config: config),
 
-        // Progress indicator (fully replaceable)
-        Positioned(
-          top: 48,
-          left: 0,
-          right: 0,
-          child:
-              config.progressBuilder?.call(
-                context,
-                state.captured.length,
-                controller.stepsCount,
-              ) ??
-              _DefaultProgress(
-                completed: state.captured.length,
-                total: controller.stepsCount,
-                color: config.primaryColor,
-              ),
-        ),
+        // Progress indicator (fully replaceable). Custom builders keep the
+        // original top-bar slot; the default is a ring around the face oval.
+        if (config.progressBuilder != null)
+          Positioned(
+            top: 48,
+            left: 0,
+            right: 0,
+            child: config.progressBuilder!(
+              context,
+              state.captured.length,
+              controller.stepsCount,
+            ),
+          )
+        else
+          _DefaultProgress(
+            completed: state.captured.length,
+            total: controller.stepsCount,
+            color: config.primaryColor,
+          ),
         Positioned(
           bottom: 200,
           left: 24,
@@ -243,24 +247,81 @@ class _DefaultProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(total, (i) {
-          final done = i < completed;
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: done ? color : Colors.white24,
+    final target = completed.clamp(0, total).toDouble();
+    return IgnorePointer(
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: target),
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOutCubic,
+        builder: (context, value, _) {
+          return CustomPaint(
+            painter: _OvalStepProgressPainter(
+              progress: value,
+              total: total,
+              color: color,
             ),
+            child: const SizedBox.expand(),
           );
-        }),
+        },
       ),
     );
   }
+}
+
+class _OvalStepProgressPainter extends CustomPainter {
+  static const double _strokeWidth = 6;
+  static const double _inflateBy = 12;
+  static const double _gapFraction = 0.22;
+
+  final double progress;
+  final int total;
+  final Color color;
+
+  _OvalStepProgressPainter({
+    required this.progress,
+    required this.total,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (total <= 0) return;
+
+    final rect = faceOvalRect(size).inflate(_inflateBy);
+    final sweepPerStep = (math.pi * 2) / total;
+    final gap = math.min(0.2, sweepPerStep * _gapFraction);
+    final sweep = sweepPerStep - gap;
+
+    final trackPaint = Paint()
+      ..color = color.withValues(alpha: 0.22)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true;
+
+    final fillPaint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true;
+
+    for (var i = 0; i < total; i++) {
+      final start = -math.pi / 2 + i * sweepPerStep + gap / 2;
+      canvas.drawArc(rect, start, sweep, false, trackPaint);
+
+      final filled = (progress - i).clamp(0.0, 1.0);
+      if (filled > 0) {
+        canvas.drawArc(rect, start, sweep * filled, false, fillPaint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _OvalStepProgressPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.total != total ||
+      oldDelegate.color != color;
 }
 
 class _DefaultInstruction extends StatelessWidget {

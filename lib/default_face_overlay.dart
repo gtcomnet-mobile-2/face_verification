@@ -1,6 +1,16 @@
 import 'package:facetest/face_capture_config.dart';
 import 'package:facetest/face_capture_state.dart';
 import 'package:flutter/material.dart';
+
+/// Oval cutout used by [DefaultFaceOverlay] and the default step-progress ring.
+Rect faceOvalRect(Size size) {
+  return Rect.fromCenter(
+    center: Offset(size.width / 2, size.height * 0.42),
+    width: size.width * 0.72,
+    height: size.width * 0.72 * 1.3,
+  );
+}
+
 /// Default guide: an oval cutout that turns [config.primaryColor] when a
 /// face is detected and [config.successColor] when the pose matches.
 ///
@@ -46,11 +56,7 @@ class _OvalOverlayPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final ovalRect = Rect.fromCenter(
-      center: Offset(size.width / 2, size.height * 0.42),
-      width: size.width * 0.72,
-      height: size.width * 0.72 * 1.3,
-    );
+    final ovalRect = faceOvalRect(size);
 
     final backgroundPath = Path()
       ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
