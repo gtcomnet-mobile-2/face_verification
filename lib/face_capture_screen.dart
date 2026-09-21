@@ -192,22 +192,12 @@ class _CaptureBody extends StatelessWidget {
             color: config.primaryColor,
           ),
         Positioned(
-          bottom: 200,
+          bottom: 100,
           left: 24,
           right: 24,
           child:
               config.instructionBuilder?.call(context, step) ??
-              Image.asset(step.assetIcon!, width: 100, height: 100),
-        ),
-
-        // Instruction (fully replaceable)
-        Positioned(
-          bottom: 120,
-          left: 24,
-          right: 24,
-          child:
-              config.instructionBuilder?.call(context, step) ??
-              _DefaultInstruction(text: step.instruction),
+              Image.asset(step.assetIcon!, width: 100, height: 150),
         ),
 
         // Manual capture button, only if autoCapture is off

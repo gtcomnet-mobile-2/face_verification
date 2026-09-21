@@ -13,7 +13,7 @@ Rect faceOvalRect(Size size) {
 
 /// Default guide: an oval cutout that turns [config.primaryColor] when a
 /// face is detected and [config.successColor] when the pose matches.
-///
+///overlayBackgroundColor
 /// This whole widget is skipped entirely if the UI team supplies
 /// [FaceCaptureConfig.overlayBuilder] — swap in an SVG mask, a square
 /// frame, a custom shader, whatever the design calls for.
