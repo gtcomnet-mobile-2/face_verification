@@ -32,23 +32,20 @@ class FacePoseStep {
     FacePoseStep(
       pose: FacePose.left,
       assetIcon: 'assets/left.gif',
-
       instruction: 'Slowly turn your head left',
       icon: Icons.arrow_left,
     ),
     FacePoseStep(
-      pose: FacePose.right,
-      assetIcon: 'assets/right.gif',
-
-      instruction: 'Slowly turn your head right',
-      icon: Icons.arrow_right,
-    ),
-    FacePoseStep(
       pose: FacePose.up,
       assetIcon: 'assets/up.gif',
-
       instruction: 'Tilt your head up',
       icon: Icons.arrow_upward,
+    ),
+    FacePoseStep(
+      pose: FacePose.right,
+      assetIcon: 'assets/right.gif',
+      instruction: 'Slowly turn your head right',
+      icon: Icons.arrow_right,
     ),
     FacePoseStep(
       pose: FacePose.down,
