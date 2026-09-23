@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:facetest/constants/app_images.dart';
 import 'package:flutter/material.dart';
 
 /// Every pose the flow can ask the user to perform.
@@ -29,15 +30,15 @@ class FacePoseStep {
   static List<FacePoseStep> defaultSteps() => const [
     FacePoseStep(
       pose: FacePose.straight,
-      assetIcon: 'assets/front.gif',
-      instruction: 'Look Up',
+      assetIcon: AppImages.front,
+      instruction: 'Look Into The Camera',
       number: "1",
-      subtitle: 'Slowly tilt your head upward',
+      subtitle: 'Slowly tilt your head into the circle',
       icon: Icons.camera_alt,
     ),
     FacePoseStep(
       pose: FacePose.left,
-      assetIcon: 'assets/left.gif',
+      assetIcon: AppImages.left,
       instruction: 'Turn Left',
       icon: Icons.arrow_left,
       number: "2",
@@ -46,7 +47,7 @@ class FacePoseStep {
     ),
     FacePoseStep(
       pose: FacePose.up,
-      assetIcon: 'assets/up.gif',
+      assetIcon: AppImages.up,
       instruction: 'Look Up',
       number: "3",
 
@@ -55,7 +56,7 @@ class FacePoseStep {
     ),
     FacePoseStep(
       pose: FacePose.right,
-      assetIcon: 'assets/right.gif',
+      assetIcon: AppImages.right,
       number: "4",
 
       subtitle: 'Slowly turn your head to the right',
@@ -64,7 +65,7 @@ class FacePoseStep {
     ),
     FacePoseStep(
       pose: FacePose.down,
-      assetIcon: 'assets/down.gif',
+      assetIcon: AppImages.down,
       subtitle: 'Slowly tilt your head downward',
       number: "5",
 
@@ -75,7 +76,7 @@ class FacePoseStep {
       pose: FacePose.smile,
       number: "6",
 
-      assetIcon: 'assets/smile.gif',
+      assetIcon: AppImages.smile,
       subtitle: 'Give us a natural smile',
       instruction: 'Smile',
       icon: Icons.sentiment_satisfied,

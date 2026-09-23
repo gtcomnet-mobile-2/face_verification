@@ -1,10 +1,10 @@
 class AppImages {
-  static const smile = "assets/smile.gif";
-  static const up = "assets/up.gif";
-  static const left = "assets/left.gif";
-  static const right = "assets/right.gif";
-  static const down = "assets/down.gif";
-  static const front = "assets/front.gif";
+  static const smile = "assets/smile1.gif";
+  static const up = "assets/up1.gif";
+  static const left = "assets/left1.gif";
+  static const right = "assets/right1.gif";
+  static const down = "assets/down1.gif";
+  static const front = "assets/front1.png";
   static const sound = "assets/sound.png";
   static const noSound = "assets/no_sound.png";
   static const logo = "assets/Logo.png";
