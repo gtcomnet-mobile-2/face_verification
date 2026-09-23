@@ -42,7 +42,6 @@ class FaceCaptureState {
     CameraController? cameraController,
     int? currentStepIndex,
     double? holdProgress, // ADD THIS PARAM
-
     List<CapturedFaceImage>? captured,
     bool? faceDetected,
     String? errorMessage,
@@ -53,7 +52,7 @@ class FaceCaptureState {
       currentStepIndex: currentStepIndex ?? this.currentStepIndex,
       captured: captured ?? this.captured,
       faceDetected: faceDetected ?? this.faceDetected,
-      holdProgress: holdProgress ?? this.holdProgress, // ADD THIS LINE
+      holdProgress: holdProgress ?? this.holdProgress, 
 
       errorMessage: errorMessage, // deliberately NOT defaulted — see note below
     );
