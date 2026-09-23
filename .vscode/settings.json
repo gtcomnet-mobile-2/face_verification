@@ -1,4 +1,6 @@
 {
   "gradle.autoDetect": "off",
-  "java.gradle.buildServer.enabled": "off"
+  "java.gradle.buildServer.enabled": "off",
+  "java.configuration.updateBuildConfiguration": "interactive",
+  "cmake.sourceDirectory": "/Volumes/ExternalSSD/Development/face_verification/example/windows/flutter"
 }

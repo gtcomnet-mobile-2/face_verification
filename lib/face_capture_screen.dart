@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
@@ -5,9 +6,9 @@ import 'package:facetest/face_capture_config.dart';
 import 'package:facetest/face_capture_cubit.dart';
 import 'package:facetest/face_capture_state.dart';
 import 'package:facetest/face_pose.dart';
-import 'package:facetest/face_verification_repository.dart';
 import 'package:flutter/material.dart';
-import 'package:text_to_speech/text_to_speech.dart';
+import 'package:flutter/services.dart';
+import 'package:stts/stts.dart';
 
 import 'default_face_overlay.dart';
 
@@ -27,39 +28,105 @@ class FaceCaptureScreen extends StatefulWidget {
   State<FaceCaptureScreen> createState() => _FaceCaptureScreenState();
 }
 
+/// Groups phases that share a widget tree so pose-match ticks don't rebuild
+/// the camera preview or GIF.
+enum _CaptureUi {
+  initializing,
+  permissionDenied,
+  cameraError,
+  capturing,
+  uploading,
+  uploadFailure,
+  uploadSuccess,
+}
+
+_CaptureUi _uiFor(FaceCapturePhase phase) {
+  return switch (phase) {
+    FaceCapturePhase.initializing => _CaptureUi.initializing,
+    FaceCapturePhase.permissionDenied => _CaptureUi.permissionDenied,
+    FaceCapturePhase.cameraError => _CaptureUi.cameraError,
+    FaceCapturePhase.uploading => _CaptureUi.uploading,
+    FaceCapturePhase.uploadFailure => _CaptureUi.uploadFailure,
+    FaceCapturePhase.uploadSuccess => _CaptureUi.uploadSuccess,
+    FaceCapturePhase.ready ||
+    FaceCapturePhase.poseMatched ||
+    FaceCapturePhase.allCaptured => _CaptureUi.capturing,
+  };
+}
+
 class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   late final FaceCaptureController _controller;
 
   // Tracks the last phase we reacted to, so side effects (like auto-submit)
   // fire exactly once per transition instead of on every rebuild.
   FaceCapturePhase? _lastHandledPhase;
-  final FaceCaptureConfig config = FaceCaptureConfig();
-  // final FaceVerificationRepository repository = FaceVerificationRepository
+  int? _lastSpokenStepIndex;
+  Timer? _firstSpeakDelay;
+  final FaceCaptureConfig config = const FaceCaptureConfig();
   final String userId = "";
+  final Tts _tts = Tts();
+
   @override
   void initState() {
     super.initState();
+    unawaited(FaceCaptureController.prepareCamera());
     _controller = FaceCaptureController(config: config);
     _controller.addListener(_handlePhaseSideEffects);
-    _controller.initialize();
+    unawaited(_controller.initialize());
   }
 
   void _handlePhaseSideEffects() {
+    _maybeSpeakStep();
+
     final phase = _controller.state.phase;
     if (phase == _lastHandledPhase) return;
     _lastHandledPhase = phase;
 
     if (phase == FaceCapturePhase.allCaptured) {
-      _controller.submit(userId: userId);
-    } else if (phase == FaceCapturePhase.uploadSuccess) {
-      widget.onSuccess?.call(_controller.state.captured);
+      final images = List<CapturedFaceImage>.from(_controller.state.captured);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        widget.onSuccess?.call(images);
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop(images);
+        }
+      });
     }
+  }
+
+  void _maybeSpeakStep() {
+    final state = _controller.state;
+    final phase = state.phase;
+    if (phase == FaceCapturePhase.initializing) {
+      _lastSpokenStepIndex = null;
+      return;
+    }
+    if (phase != FaceCapturePhase.ready &&
+        phase != FaceCapturePhase.poseMatched) {
+      return;
+    }
+    final index = state.currentStepIndex;
+    if (_lastSpokenStepIndex == index) return;
+    _lastSpokenStepIndex = index;
+    final instruction = _controller.currentStep.instruction;
+    if (index == 0 && phase == FaceCapturePhase.ready) {
+      _firstSpeakDelay?.cancel();
+      _firstSpeakDelay = Timer(const Duration(milliseconds: 400), () {
+        if (!mounted) return;
+        unawaited(_tts.start(instruction));
+      });
+      return;
+    }
+    unawaited(_tts.start(instruction));
   }
 
   @override
   void dispose() {
+    _firstSpeakDelay?.cancel();
     _controller.removeListener(_handlePhaseSideEffects);
     _controller.dispose();
+    unawaited(_tts.stop());
+    _tts.dispose();
     super.dispose();
   }
 
@@ -67,34 +134,27 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      // ListenableBuilder is built into Flutter (foundation.dart) — it
-      // rebuilds this subtree every time _controller calls notifyListeners().
-      body: ListenableBuilder(
-        listenable: _controller,
-        builder: (context, _) => _buildForPhase(context),
+      body: _ControllerSelect<_CaptureUi>(
+        controller: _controller,
+        selector: (state) => _uiFor(state.phase),
+        builder: (context, ui) => _buildForUi(context, ui),
       ),
     );
   }
 
-  Widget _buildForPhase(BuildContext context) {
+  Widget _buildForUi(BuildContext context, _CaptureUi ui) {
     final state = _controller.state;
-    final config = FaceCaptureConfig();
-
-    switch (state.phase) {
-      case FaceCapturePhase.initializing:
-        return const Center(
-          child: CircularProgressIndicator(color: Colors.white),
-        );
-
-      case FaceCapturePhase.permissionDenied:
-        return _Message(
-          text: 'Camera permission is required to verify your identity.',
-          color: config.errorColor,
-          onRetry: _controller.initialize,
-        );
-
-      case FaceCapturePhase.cameraError:
-        return config.errorBuilder?.call(
+    return switch (ui) {
+      _CaptureUi.initializing => const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      ),
+      _CaptureUi.permissionDenied => _Message(
+        text: 'Camera permission is required to verify your identity.',
+        color: config.errorColor,
+        onRetry: _controller.initialize,
+      ),
+      _CaptureUi.cameraError =>
+        config.errorBuilder?.call(
               context,
               state.errorMessage ?? 'Camera error',
               _controller.retry,
@@ -104,15 +164,12 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                   state.errorMessage ?? 'Something went wrong with the camera.',
               color: config.errorColor,
               onRetry: _controller.retry,
-            );
-
-      case FaceCapturePhase.uploading:
-        return const Center(
-          child: CircularProgressIndicator(color: Colors.white),
-        );
-
-      case FaceCapturePhase.uploadFailure:
-        return config.errorBuilder?.call(
+            ),
+      _CaptureUi.uploading => const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      ),
+      _CaptureUi.uploadFailure =>
+        config.errorBuilder?.call(
               context,
               state.errorMessage ?? 'Upload failed',
               () => _controller.submit(userId: userId),
@@ -121,86 +178,39 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
               text: state.errorMessage ?? 'Upload failed.',
               color: config.errorColor,
               onRetry: () => _controller.submit(userId: userId),
-            );
-
-      case FaceCapturePhase.uploadSuccess:
-        return config.successBuilder?.call(context) ??
+            ),
+      _CaptureUi.uploadSuccess =>
+        config.successBuilder?.call(context) ??
             Center(
               child: Icon(
                 Icons.check_circle,
                 color: config.successColor,
                 size: 96,
               ),
-            );
-
-      case FaceCapturePhase.ready:
-      case FaceCapturePhase.poseMatched:
-      case FaceCapturePhase.allCaptured:
-        return _CaptureBody(
-          config: config,
-          state: state,
-          controller: _controller,
-        );
-    }
+            ),
+      _CaptureUi.capturing => _CaptureBody(
+        config: config,
+        controller: _controller,
+      ),
+    };
   }
 }
 
 class _CaptureBody extends StatelessWidget {
   final FaceCaptureConfig config;
-  final FaceCaptureState state;
   final FaceCaptureController controller;
 
-  const _CaptureBody({
-    required this.config,
-    required this.state,
-    required this.controller,
-  });
+  const _CaptureBody({required this.config, required this.controller});
 
   @override
   Widget build(BuildContext context) {
-    final camController = state.cameraController;
-    final step = controller.currentStep;
     return Stack(
       fit: StackFit.expand,
       children: [
-        if (camController != null && camController.value.isInitialized)
-          CameraPreview(camController)
-        else
-          const ColoredBox(color: Colors.black),
-
-        // Overlay guide (fully replaceable)
-        config.overlayBuilder?.call(context, state) ??
-            DefaultFaceOverlay(state: state, config: config),
-
-        // Progress indicator (fully replaceable). Custom builders keep the
-        // original top-bar slot; the default is a ring around the face oval.
-        if (config.progressBuilder != null)
-          Positioned(
-            top: 48,
-            left: 0,
-            right: 0,
-            child: config.progressBuilder!(
-              context,
-              state.captured.length,
-              controller.stepsCount,
-            ),
-          )
-        else
-          _DefaultProgress(
-            completed: state.captured.length,
-            total: controller.stepsCount,
-            color: config.primaryColor,
-          ),
-        Positioned(
-          bottom: 100,
-          left: 24,
-          right: 24,
-          child:
-              config.instructionBuilder?.call(context, step) ??
-              Image.asset(step.assetIcon!, width: 100, height: 150),
-        ),
-
-        // Manual capture button, only if autoCapture is off
+        _CameraLayer(controller: controller),
+        _OverlayLayer(config: config, controller: controller),
+        _ProgressLayer(config: config, controller: controller),
+        _InstructionLayer(config: config, controller: controller),
         if (!config.autoCapture)
           Positioned(
             bottom: 40,
@@ -222,6 +232,218 @@ class _CaptureBody extends StatelessWidget {
       ],
     );
   }
+}
+
+class _CameraLayer extends StatelessWidget {
+  final FaceCaptureController controller;
+
+  const _CameraLayer({required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return _ControllerSelect<CameraController?>(
+      controller: controller,
+      selector: (state) => state.cameraController,
+      builder: (context, camController) {
+        return RepaintBoundary(
+          child: camController != null && camController.value.isInitialized
+              ? CameraPreview(camController)
+              : const ColoredBox(color: Colors.black),
+        );
+      },
+    );
+  }
+}
+
+class _OverlayLayer extends StatelessWidget {
+  final FaceCaptureConfig config;
+  final FaceCaptureController controller;
+
+  const _OverlayLayer({required this.config, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return _ControllerSelect<(FaceCapturePhase, bool, int)>(
+      controller: controller,
+      selector: (state) =>
+          (state.phase, state.faceDetected, state.currentStepIndex),
+      builder: (context, _) {
+        return config.overlayBuilder?.call(context, controller.state) ??
+            DefaultFaceOverlay(state: controller.state, config: config);
+      },
+    );
+  }
+}
+
+class _ProgressLayer extends StatelessWidget {
+  final FaceCaptureConfig config;
+  final FaceCaptureController controller;
+
+  const _ProgressLayer({required this.config, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return _ControllerSelect<int>(
+      controller: controller,
+      selector: (state) => state.captured.length,
+      builder: (context, completed) {
+        if (config.progressBuilder != null) {
+          return Positioned(
+            top: 48,
+            left: 0,
+            right: 0,
+            child: config.progressBuilder!(
+              context,
+              completed,
+              controller.stepsCount,
+            ),
+          );
+        }
+        return RepaintBoundary(
+          child: _DefaultProgress(
+            completed: completed,
+            total: controller.stepsCount,
+            color: config.primaryColor,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _InstructionLayer extends StatelessWidget {
+  final FaceCaptureConfig config;
+  final FaceCaptureController controller;
+
+  const _InstructionLayer({required this.config, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: 100,
+      left: 24,
+      right: 24,
+      child: _ControllerSelect<int>(
+        controller: controller,
+        selector: (state) => state.currentStepIndex,
+        builder: (context, _) {
+          final step = controller.currentStep;
+          return config.instructionBuilder?.call(context, step) ??
+              RepaintBoundary(
+                child: _PoseGuideGif(assetPath: step.assetIcon!),
+              );
+        },
+      ),
+    );
+  }
+}
+
+/// Pose GIFs live in this package. Host apps load them as
+/// `packages/facetest/...`; running facetest itself uses `assets/...`.
+class _PoseGuideGif extends StatefulWidget {
+  final String assetPath;
+
+  const _PoseGuideGif({required this.assetPath});
+
+  @override
+  State<_PoseGuideGif> createState() => _PoseGuideGifState();
+}
+
+class _PoseGuideGifState extends State<_PoseGuideGif> {
+  static const _packageName = 'facetest';
+  static String? _package;
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_resolvePackage());
+  }
+
+  Future<void> _resolvePackage() async {
+    if (_package != null) {
+      if (mounted) setState(() => _ready = true);
+      return;
+    }
+    final assets = (await AssetManifest.loadFromAssetBundle(
+      rootBundle,
+    )).listAssets();
+    _package = assets.any((asset) => asset.startsWith('packages/$_packageName/'))
+        ? _packageName
+        : '';
+    if (mounted) setState(() => _ready = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_ready) {
+      return const SizedBox(width: 100, height: 150);
+    }
+    return Image.asset(
+      widget.assetPath,
+      width: 100,
+      height: 150,
+      package: _package!.isEmpty ? null : _package,
+      gaplessPlayback: true,
+      excludeFromSemantics: true,
+      filterQuality: FilterQuality.low,
+    );
+  }
+}
+
+/// Rebuilds only when [selector] returns a different value.
+class _ControllerSelect<T> extends StatefulWidget {
+  final FaceCaptureController controller;
+  final T Function(FaceCaptureState state) selector;
+  final Widget Function(BuildContext context, T value) builder;
+
+  const _ControllerSelect({
+    required this.controller,
+    required this.selector,
+    required this.builder,
+  });
+
+  @override
+  State<_ControllerSelect<T>> createState() => _ControllerSelectState<T>();
+}
+
+class _ControllerSelectState<T> extends State<_ControllerSelect<T>> {
+  late T _value;
+
+  @override
+  void initState() {
+    super.initState();
+    _value = widget.selector(widget.controller.state);
+    widget.controller.addListener(_handleChange);
+  }
+
+  @override
+  void didUpdateWidget(_ControllerSelect<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_handleChange);
+      widget.controller.addListener(_handleChange);
+    }
+    final next = widget.selector(widget.controller.state);
+    if (next != _value) {
+      _value = next;
+    }
+  }
+
+  void _handleChange() {
+    final next = widget.selector(widget.controller.state);
+    if (next == _value) return;
+    setState(() => _value = next);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_handleChange);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context, _value);
 }
 
 class _DefaultProgress extends StatelessWidget {
@@ -313,50 +535,6 @@ class _OvalStepProgressPainter extends CustomPainter {
       oldDelegate.progress != progress ||
       oldDelegate.total != total ||
       oldDelegate.color != color;
-}
-
-class _DefaultInstruction extends StatelessWidget {
-  final String text;
-  _DefaultInstruction({required this.text});
-  TextToSpeech tts = TextToSpeech();
-
-  Future<List<String>?> getVoices() async {
-    // List<String>? voices = await tts.getVoice();
-
-    // String language = 'en-US';
-    // List<String>? voices = await tts.getVoiceByLang(language);
-
-    // final code = await tts.getLanguageCodeByName('Japan');
-    // tts.setLanguage(code!);
-  }
-
-
-
-
-  @override
-  Widget build(BuildContext context) {
-    // getVoices();
-    // final player = AudioPlayer();
-    // await player.play(UrlSourc.com/my-a));
-    tts.speak(text);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-      decoration: BoxDecoration(
-        color: Colors.black54,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
 }
 
 class _Message extends StatelessWidget {

@@ -13,10 +13,9 @@ Rect faceOvalRect(Size size) {
 
 /// Default guide: an oval cutout that turns [config.primaryColor] when a
 /// face is detected and [config.successColor] when the pose matches.
-///overlayBackgroundColor
-/// This whole widget is skipped entirely if the UI team supplies
-/// [FaceCaptureConfig.overlayBuilder] — swap in an SVG mask, a square
-/// frame, a custom shader, whatever the design calls for.
+///
+/// The filled hole is isolated from the stroke so pose-match color changes
+/// don't rerasterize the full-screen cutout.
 class DefaultFaceOverlay extends StatelessWidget {
   final FaceCaptureState state;
   final FaceCaptureConfig config;
@@ -34,43 +33,57 @@ class DefaultFaceOverlay extends StatelessWidget {
         : (state.faceDetected ? config.primaryColor : Colors.white70);
 
     return IgnorePointer(
-      child: CustomPaint(
-        painter: _OvalOverlayPainter(
-          borderColor: borderColor,
-          backgroundColor: config.overlayBackgroundColor,
-        ),
-        child: const SizedBox.expand(),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          RepaintBoundary(
+            child: CustomPaint(
+              painter: _OvalCutoutPainter(
+                backgroundColor: config.overlayBackgroundColor,
+              ),
+              child: const SizedBox.expand(),
+            ),
+          ),
+          CustomPaint(
+            painter: _OvalBorderPainter(borderColor: borderColor),
+            child: const SizedBox.expand(),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _OvalOverlayPainter extends CustomPainter {
-  final Color borderColor;
+class _OvalCutoutPainter extends CustomPainter {
   final Color backgroundColor;
 
-  _OvalOverlayPainter({
-    required this.borderColor,
-    required this.backgroundColor,
-  });
+  _OvalCutoutPainter({required this.backgroundColor});
 
   @override
   void paint(Canvas canvas, Size size) {
     final ovalRect = faceOvalRect(size);
-
-    final backgroundPath = Path()
-      ..addRect(Rect.fromLTWH(0, 0, size.width, size.height));
-    final ovalPath = Path()..addOval(ovalRect);
     final cutoutPath = Path.combine(
       PathOperation.difference,
-      backgroundPath,
-      ovalPath,
+      Path()..addRect(Offset.zero & size),
+      Path()..addOval(ovalRect),
     );
-
     canvas.drawPath(cutoutPath, Paint()..color = backgroundColor);
+  }
 
+  @override
+  bool shouldRepaint(covariant _OvalCutoutPainter oldDelegate) =>
+      oldDelegate.backgroundColor != backgroundColor;
+}
+
+class _OvalBorderPainter extends CustomPainter {
+  final Color borderColor;
+
+  _OvalBorderPainter({required this.borderColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
     canvas.drawOval(
-      ovalRect,
+      faceOvalRect(size),
       Paint()
         ..color = borderColor
         ..style = PaintingStyle.stroke
@@ -79,6 +92,6 @@ class _OvalOverlayPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _OvalOverlayPainter oldDelegate) =>
+  bool shouldRepaint(covariant _OvalBorderPainter oldDelegate) =>
       oldDelegate.borderColor != borderColor;
 }

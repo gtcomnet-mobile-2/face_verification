@@ -1,14 +1,19 @@
 import 'package:camera/camera.dart';
 import 'package:facetest/face_pose.dart';
 
-
 enum FaceCapturePhase {
   initializing,
   permissionDenied,
   cameraError,
-  ready, // camera live, waiting for face to line up
-  poseMatched, // holding correct pose, counting down to auto-capture
-  allCaptured, // all steps done, ready to submit
+
+  /// camera live, waiting for face to line up
+  ready,
+
+  /// holding correct pose, counting down to auto-capture
+  poseMatched,
+
+  /// all steps done, ready to submit
+  allCaptured,
   uploading,
   uploadSuccess,
   uploadFailure,
@@ -32,7 +37,7 @@ class FaceCaptureState {
     this.currentStepIndex = 0,
     this.captured = const [],
     this.faceDetected = false,
-    this.holdProgress = 0.0, // ADD THIS LINE
+    this.holdProgress = 0.0,
 
     this.errorMessage,
   });
@@ -41,7 +46,8 @@ class FaceCaptureState {
     FaceCapturePhase? phase,
     CameraController? cameraController,
     int? currentStepIndex,
-    double? holdProgress, // ADD THIS PARAM
+    double? holdProgress,
+
     List<CapturedFaceImage>? captured,
     bool? faceDetected,
     String? errorMessage,
@@ -52,9 +58,9 @@ class FaceCaptureState {
       currentStepIndex: currentStepIndex ?? this.currentStepIndex,
       captured: captured ?? this.captured,
       faceDetected: faceDetected ?? this.faceDetected,
-      holdProgress: holdProgress ?? this.holdProgress, 
+      holdProgress: holdProgress ?? this.holdProgress,
 
-      errorMessage: errorMessage, // deliberately NOT defaulted — see note below
+      errorMessage: errorMessage,
     );
   }
 }
