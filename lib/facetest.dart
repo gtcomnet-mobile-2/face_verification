@@ -1,8 +1,9 @@
 import 'dart:async';
 
-import 'package:facetest/face_capture_cubit.dart';
+import 'package:facetest/controller/face_capture_cubit.dart';
 import 'package:facetest/face_capture_screen.dart';
 import 'package:facetest/face_pose.dart';
+import 'package:facetest/sdk_welcome_screen.dart';
 import 'package:flutter/material.dart';
 
 class Facetest {
@@ -19,8 +20,8 @@ class Facetest {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            FaceCaptureScreen(onSuccess: onSuccess, onCancel: onCancel),
+        builder: (context) => SdkWelcomePage(onSuccess: onSuccess, onCancel: onCancel),
+            // FaceCaptureScreen(onSuccess: onSuccess, onCancel: onCancel),
       ),
     );
   }

@@ -1,13 +1,14 @@
-import 'package:facetest/face_capture_config.dart';
-import 'package:facetest/face_capture_state.dart';
+import 'package:facetest/config/face_capture_config.dart';
+import 'package:facetest/controller/face_capture_state.dart';
+import 'package:facetest/global_widgets/top_bar.dart';
 import 'package:flutter/material.dart';
 
 /// Oval cutout used by [DefaultFaceOverlay] and the default step-progress ring.
 Rect faceOvalRect(Size size) {
   return Rect.fromCenter(
-    center: Offset(size.width / 2, size.height * 0.42),
-    width: size.width * 0.72,
-    height: size.width * 0.72 * 1.3,
+    center: Offset(size.width / 2, size.height * 0.559),
+    width: size.width * 0.75,
+    height: size.width * 0.7,
   );
 }
 
@@ -16,21 +17,33 @@ Rect faceOvalRect(Size size) {
 ///
 /// The filled hole is isolated from the stroke so pose-match color changes
 /// don't rerasterize the full-screen cutout.
-class DefaultFaceOverlay extends StatelessWidget {
+class DefaultFaceOverlay extends StatefulWidget {
   final FaceCaptureState state;
   final FaceCaptureConfig config;
-
+  final ValueChanged<bool>? onSoundToggle;
+  final VoidCallback? onClose;
   const DefaultFaceOverlay({
     super.key,
     required this.state,
     required this.config,
+    this.onSoundToggle,
+    this.onClose,
   });
 
   @override
+  State<DefaultFaceOverlay> createState() => _DefaultFaceOverlayState();
+}
+
+class _DefaultFaceOverlayState extends State<DefaultFaceOverlay> {
+  final showAudio = false;
+
+  @override
   Widget build(BuildContext context) {
-    final borderColor = state.phase == FaceCapturePhase.poseMatched
-        ? config.successColor
-        : (state.faceDetected ? config.primaryColor : Colors.white70);
+    final borderColor = widget.state.phase == FaceCapturePhase.poseMatched
+        ? widget.config.successColor
+        : (widget.state.faceDetected
+              ? widget.config.primaryColor
+              : Colors.white70);
 
     return IgnorePointer(
       child: Stack(
@@ -39,9 +52,20 @@ class DefaultFaceOverlay extends StatelessWidget {
           RepaintBoundary(
             child: CustomPaint(
               painter: _OvalCutoutPainter(
-                backgroundColor: config.overlayBackgroundColor,
+                backgroundColor: widget.config.overlayBackgroundColor,
               ),
-              child: const SizedBox.expand(),
+              child: Container(
+                margin: EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    TopBar(
+                      showSound: true,
+                      onSoundToggle: widget.onSoundToggle,
+                      onClose: widget.onClose,
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
           CustomPaint(

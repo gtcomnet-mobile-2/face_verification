@@ -12,11 +12,15 @@ enum FacePose { straight, left, right, up, down, smile }
 class FacePoseStep {
   final FacePose pose;
   final String instruction;
+  final String subtitle;
+  final String number;
   final IconData? icon; // optional, e.g. Icons.arrow_left
   final String? assetIcon; // optional, e.g. 'assets/icons/turn_left.svg'
 
   const FacePoseStep({
     required this.pose,
+    required this.number,
+    required this.subtitle,
     required this.instruction,
     this.icon,
     this.assetIcon,
@@ -26,39 +30,54 @@ class FacePoseStep {
     FacePoseStep(
       pose: FacePose.straight,
       assetIcon: 'assets/front.gif',
-      instruction: 'Look straight into the camera',
+      instruction: 'Look Up',
+      number: "1",
+      subtitle: 'Slowly tilt your head upward',
       icon: Icons.camera_alt,
     ),
     FacePoseStep(
       pose: FacePose.left,
       assetIcon: 'assets/left.gif',
-      instruction: 'Slowly turn your head left',
+      instruction: 'Turn Left',
       icon: Icons.arrow_left,
+      number: "2",
+
+      subtitle: 'Slowly turn your head to the left',
     ),
     FacePoseStep(
       pose: FacePose.up,
       assetIcon: 'assets/up.gif',
-      instruction: 'Tilt your head up',
+      instruction: 'Look Up',
+      number: "3",
+
+      subtitle: 'Slowly tilt your head upward',
       icon: Icons.arrow_upward,
     ),
     FacePoseStep(
       pose: FacePose.right,
       assetIcon: 'assets/right.gif',
-      instruction: 'Slowly turn your head right',
+      number: "4",
+
+      subtitle: 'Slowly turn your head to the right',
+      instruction: 'Turn Right',
       icon: Icons.arrow_right,
     ),
     FacePoseStep(
       pose: FacePose.down,
       assetIcon: 'assets/down.gif',
+      subtitle: 'Slowly tilt your head downward',
+      number: "5",
 
-      instruction: 'Tilt your head down',
+      instruction: 'Look Down',
       icon: Icons.arrow_downward,
     ),
     FacePoseStep(
       pose: FacePose.smile,
-      assetIcon: 'assets/smile.gif',
+      number: "6",
 
-      instruction: 'Give us a smile',
+      assetIcon: 'assets/smile.gif',
+      subtitle: 'Give us a natural smile',
+      instruction: 'Smile',
       icon: Icons.sentiment_satisfied,
     ),
   ];

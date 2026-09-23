@@ -1,7 +1,8 @@
 import 'package:dio/dio.dart';
-import 'package:facetest/face_capture_config.dart';
+import 'package:facetest/config/face_capture_config.dart';
 import 'package:facetest/face_capture_screen.dart';
 import 'package:facetest/face_verification_repository.dart';
+import 'package:facetest/sdk_welcome_screen.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -64,15 +65,17 @@ class _MyHomePageState extends State<MyHomePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => FaceCaptureScreen(
-          // userId: "id",
-          // repository: DioFaceVerificationRepository(dio),
-          // config: const FaceCaptureConfig(), // defaults — see below to theme
-          onSuccess: (images) {
-            Navigator.pop(context);
-            // navigate to your "verified" screen
-          },
-        ),
+        // builder: (_) => FaceCaptureScreen(
+        //   // userId: "id",
+        //   // repository: DioFaceVerificationRepository(dio),
+        //   // config: const FaceCaptureConfig(), // defaults — see below to theme
+        //   onSuccess: (images) {
+        //     Navigator.pop(context);
+        //     // navigate to your "verified" screen
+        //   },
+        // ),
+
+        builder: (_) => SdkWelcomePage(),
       ),
     );
   }

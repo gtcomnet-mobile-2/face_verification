@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
-import 'package:facetest/face_capture_config.dart';
+import 'package:facetest/config/face_capture_config.dart';
 import 'package:facetest/face_pose.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';

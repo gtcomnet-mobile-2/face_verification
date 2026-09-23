@@ -1,4 +1,4 @@
-import 'package:facetest/face_capture_state.dart';
+import 'package:facetest/controller/face_capture_state.dart';
 import 'package:facetest/face_pose.dart';
 import 'package:flutter/material.dart';
 

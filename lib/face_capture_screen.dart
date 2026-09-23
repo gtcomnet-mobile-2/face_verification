@@ -2,10 +2,13 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:camera/camera.dart';
-import 'package:facetest/face_capture_config.dart';
-import 'package:facetest/face_capture_cubit.dart';
-import 'package:facetest/face_capture_state.dart';
+import 'package:facetest/config/face_capture_config.dart';
+import 'package:facetest/constants/color_pallet.dart';
+import 'package:facetest/controller/face_capture_cubit.dart';
+import 'package:facetest/controller/face_capture_state.dart';
 import 'package:facetest/face_pose.dart';
+import 'package:facetest/global_widgets/app_text.dart';
+import 'package:facetest/global_widgets/powered_by.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:stts/stts.dart';
@@ -65,6 +68,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   final FaceCaptureConfig config = const FaceCaptureConfig();
   final String userId = "";
   final Tts _tts = Tts();
+  bool _audioEnabled = false; // <-- add this
 
   @override
   void initState() {
@@ -95,6 +99,8 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   }
 
   void _maybeSpeakStep() {
+    if (!_audioEnabled) return; // <-- add this guard
+
     final state = _controller.state;
     final phase = state.phase;
     if (phase == FaceCapturePhase.initializing) {
@@ -191,6 +197,11 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       _CaptureUi.capturing => _CaptureBody(
         config: config,
         controller: _controller,
+        onSoundToggle: (on) => setState(() => _audioEnabled = on),
+        onClose: () {
+          widget.onCancel?.call();
+          if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+        },
       ),
     };
   }
@@ -199,8 +210,14 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 class _CaptureBody extends StatelessWidget {
   final FaceCaptureConfig config;
   final FaceCaptureController controller;
-
-  const _CaptureBody({required this.config, required this.controller});
+  final ValueChanged<bool>? onSoundToggle;
+  final VoidCallback? onClose;
+  const _CaptureBody({
+    required this.config,
+    required this.controller,
+    this.onSoundToggle,
+    this.onClose,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -208,9 +225,16 @@ class _CaptureBody extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         _CameraLayer(controller: controller),
-        _OverlayLayer(config: config, controller: controller),
+        _OverlayLayer(
+          config: config,
+          controller: controller,
+          onSoundToggle: onSoundToggle,
+          onClose: onClose,
+        ),
         _ProgressLayer(config: config, controller: controller),
         _InstructionLayer(config: config, controller: controller),
+        DotsLayer(config: config, controller: controller),
+
         if (!config.autoCapture)
           Positioned(
             bottom: 40,
@@ -255,21 +279,40 @@ class _CameraLayer extends StatelessWidget {
   }
 }
 
-class _OverlayLayer extends StatelessWidget {
+class _OverlayLayer extends StatefulWidget {
   final FaceCaptureConfig config;
   final FaceCaptureController controller;
+  final ValueChanged<bool>? onSoundToggle;
+  final VoidCallback? onClose;
+  const _OverlayLayer({
+    required this.config,
+    required this.controller,
+    this.onSoundToggle,
+    this.onClose,
+  });
 
-  const _OverlayLayer({required this.config, required this.controller});
+  @override
+  State<_OverlayLayer> createState() => _OverlayLayerState();
+}
 
+class _OverlayLayerState extends State<_OverlayLayer> {
   @override
   Widget build(BuildContext context) {
     return _ControllerSelect<(FaceCapturePhase, bool, int)>(
-      controller: controller,
+      controller: widget.controller,
       selector: (state) =>
           (state.phase, state.faceDetected, state.currentStepIndex),
       builder: (context, _) {
-        return config.overlayBuilder?.call(context, controller.state) ??
-            DefaultFaceOverlay(state: controller.state, config: config);
+        return widget.config.overlayBuilder?.call(
+              context,
+              widget.controller.state,
+            ) ??
+            DefaultFaceOverlay(
+              state: widget.controller.state,
+              config: widget.config,
+              onSoundToggle: widget.onSoundToggle,
+              onClose: widget.onClose,
+            );
       },
     );
   }
@@ -320,7 +363,7 @@ class _InstructionLayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      bottom: 100,
+      top: 100,
       left: 24,
       right: 24,
       child: _ControllerSelect<int>(
@@ -330,8 +373,73 @@ class _InstructionLayer extends StatelessWidget {
           final step = controller.currentStep;
           return config.instructionBuilder?.call(context, step) ??
               RepaintBoundary(
-                child: _PoseGuideGif(assetPath: step.assetIcon!),
+                child: _PoseGuideGif(
+                  assetPath: step.assetIcon!,
+                  command: step.instruction,
+                  subtitle: step.subtitle,
+                  number: step.number,
+                ),
               );
+        },
+      ),
+    );
+  }
+}
+
+class DotsLayer extends StatelessWidget {
+  final FaceCaptureConfig config;
+  final FaceCaptureController controller;
+
+  const DotsLayer({super.key, required this.config, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: 50,
+      left: 0,
+      right: 0,
+      child: _ControllerSelect<int>(
+        controller: controller,
+        selector: (state) => state.currentStepIndex,
+        builder: (context, currentIndex) {
+          final total = controller.stepsCount;
+          return Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(total, (i) {
+                  final active = i == currentIndex;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: active
+                          ? config.primaryColor
+                          : config.primaryColor.withValues(alpha: 0.25),
+                    ),
+                  );
+                }),
+              ),
+              SizedBox(height: 25),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  AppText(
+                    text: "Your information is secure and protected",
+                    size: 12,
+                    color: NeutralColors.n600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ],
+              ),
+              SizedBox(height: 25),
+
+              PoweredBy(),
+            ],
+          );
         },
       ),
     );
@@ -342,8 +450,16 @@ class _InstructionLayer extends StatelessWidget {
 /// `packages/facetest/...`; running facetest itself uses `assets/...`.
 class _PoseGuideGif extends StatefulWidget {
   final String assetPath;
+  final String command;
+  final String subtitle;
+  final String number;
 
-  const _PoseGuideGif({required this.assetPath});
+  const _PoseGuideGif({
+    required this.assetPath,
+    required this.command,
+    required this.subtitle,
+    required this.number,
+  });
 
   @override
   State<_PoseGuideGif> createState() => _PoseGuideGifState();
@@ -365,10 +481,10 @@ class _PoseGuideGifState extends State<_PoseGuideGif> {
       if (mounted) setState(() => _ready = true);
       return;
     }
-    final assets = (await AssetManifest.loadFromAssetBundle(
-      rootBundle,
-    )).listAssets();
-    _package = assets.any((asset) => asset.startsWith('packages/$_packageName/'))
+    final assets = (await AssetManifest.loadFromAssetBundle(rootBundle))
+        .listAssets();
+    _package =
+        assets.any((asset) => asset.startsWith('packages/$_packageName/'))
         ? _packageName
         : '';
     if (mounted) setState(() => _ready = true);
@@ -379,14 +495,53 @@ class _PoseGuideGifState extends State<_PoseGuideGif> {
     if (!_ready) {
       return const SizedBox(width: 100, height: 150);
     }
-    return Image.asset(
-      widget.assetPath,
-      width: 100,
-      height: 150,
-      package: _package!.isEmpty ? null : _package,
-      gaplessPlayback: true,
-      excludeFromSemantics: true,
-      filterQuality: FilterQuality.low,
+    return Column(
+      children: [
+        SizedBox(height: 50),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              height: 24,
+              width: 24,
+              decoration: BoxDecoration(
+                color: PrimaryColors.p500,
+                shape: BoxShape.circle,
+              ),
+              child: Center(
+                child: AppText(
+                  text: widget.number,
+                  color: Colors.white,
+                  size: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            SizedBox(width: 8),
+            AppText(
+              text: widget.command,
+              color: NeutralColors.n800,
+              size: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ],
+        ),
+        AppText(
+          text: widget.subtitle,
+          color: NeutralColors.n600,
+          size: 14,
+          fontWeight: FontWeight.w400,
+        ),
+        Image.asset(
+          widget.assetPath,
+          width: 100,
+          height: 150,
+          package: _package!.isEmpty ? null : _package,
+          gaplessPlayback: true,
+          excludeFromSemantics: true,
+          filterQuality: FilterQuality.low,
+        ),
+      ],
     );
   }
 }
