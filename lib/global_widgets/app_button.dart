@@ -2,26 +2,48 @@ import 'package:facetest/constants/color_pallet.dart';
 import 'package:facetest/global_widgets/app_text.dart';
 import 'package:flutter/material.dart';
 
-
 class AppButton extends StatelessWidget {
-  const AppButton({super.key, required this.onTap});
+  const AppButton({
+    super.key,
+    required this.onTap,
+    this.backgroundColor,
+    this.border,
+    this.child,
+    this.width,
+    this.height,
+    this.padding,
+  });
   final Function()? onTap;
+  final Color? backgroundColor;
+  final BoxBorder? border;
+  final Widget? child;
+
+  final num? width;
+  final num? height;
+  final EdgeInsets? padding;
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 48,
-        padding: EdgeInsets.symmetric(vertical: 14.5, horizontal: 97),
+        height: height?.toDouble() ?? 48,
+        width: width?.toDouble(),
+        // padding: EdgeInsets.symmetric(vertical: 14.5, horizontal: 97),
         decoration: BoxDecoration(
-          color: PrimaryColors.p800,
+          border: border,
+          color: backgroundColor ?? PrimaryColors.p800,
           borderRadius: BorderRadius.circular(24),
         ),
-        child: AppText(
-          text: "Start Verification",
-          color: Colors.white,
-          size: 16,
-          fontWeight: FontWeight.w600,
+        child: Center(
+          child:
+              child ??
+              AppText(
+                text: "Start Verification",
+                color: Colors.white,
+                size: 16,
+                fontWeight: FontWeight.w600,
+                textAlign: TextAlign.center,
+              ),
         ),
       ),
     );

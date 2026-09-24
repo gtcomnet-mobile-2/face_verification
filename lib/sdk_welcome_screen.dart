@@ -4,6 +4,7 @@ import 'package:facetest/face_capture_screen.dart';
 import 'package:facetest/face_pose.dart';
 import 'package:facetest/global_widgets/app_button.dart';
 import 'package:facetest/global_widgets/app_text.dart';
+import 'package:facetest/global_widgets/error_dialog.dart';
 import 'package:facetest/global_widgets/powered_by.dart';
 import 'package:facetest/global_widgets/sound_activate.dart';
 import 'package:facetest/global_widgets/top_bar.dart';
@@ -24,10 +25,19 @@ class SdkWelcomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              TopBar(showSound: false),
+              TopBar(
+                showSound: false,
+                onClose: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return ErrorAlert();
+                    },
+                  );
+                },
+              ),
 
               // SizedBox(height: 42),
-
               AppText(
                 text: "Verify Your Identity",
                 fontWeight: FontWeight.w500,

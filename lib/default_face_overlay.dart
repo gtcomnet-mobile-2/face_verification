@@ -1,5 +1,6 @@
 import 'package:facetest/config/face_capture_config.dart';
 import 'package:facetest/controller/face_capture_state.dart';
+import 'package:facetest/global_widgets/error_dialog.dart';
 import 'package:facetest/global_widgets/top_bar.dart';
 import 'package:flutter/material.dart';
 
@@ -20,12 +21,10 @@ Rect faceOvalRect(Size size) {
 class DefaultFaceOverlay extends StatefulWidget {
   final FaceCaptureState state;
   final FaceCaptureConfig config;
-  final VoidCallback? onClose;
   const DefaultFaceOverlay({
     super.key,
     required this.state,
     required this.config,
-    this.onClose,
   });
 
   @override
@@ -71,7 +70,14 @@ class _DefaultFaceOverlayState extends State<DefaultFaceOverlay> {
             children: [
               TopBar(
                 showSound: true,
-                onClose: widget.onClose,
+                onClose: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return ErrorAlert();
+                    },
+                  );
+                },
               ),
             ],
           ),

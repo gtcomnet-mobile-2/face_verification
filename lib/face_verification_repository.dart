@@ -1,10 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:facetest/face_pose.dart';
-
-
-/// Talks to your backend. Swap the Dio implementation for whatever your
-/// existing networking layer looks like — this is the only file that
-/// should know about HTTP.
 abstract class FaceVerificationRepository {
   Future<void> submitVerification({
     required String userId,
