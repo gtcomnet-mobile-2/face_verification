@@ -87,7 +87,7 @@ class _MyHomePageState extends State<MyHomePage> {
         onPressed: () => Facetest.launchCamera(
           context,
           onSuccess: (files) {
-            log(files.map((e) => e.file.path).join(', '));
+            log(files.map((e) => e.file.path).join('\n'));
           },
         ),
         tooltip: 'Increment',

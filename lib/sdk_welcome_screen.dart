@@ -24,10 +24,9 @@ class SdkWelcomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              SizedBox(height: 26),
               TopBar(showSound: false),
 
-              SizedBox(height: 42),
+              // SizedBox(height: 42),
 
               AppText(
                 text: "Verify Your Identity",

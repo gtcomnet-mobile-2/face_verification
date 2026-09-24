@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:facetest/controller/face_capture_cubit.dart';
-import 'package:facetest/face_capture_screen.dart';
 import 'package:facetest/face_pose.dart';
 import 'package:facetest/sdk_welcome_screen.dart';
 import 'package:flutter/material.dart';

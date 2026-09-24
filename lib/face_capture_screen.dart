@@ -6,6 +6,7 @@ import 'package:facetest/config/face_capture_config.dart';
 import 'package:facetest/constants/color_pallet.dart';
 import 'package:facetest/controller/face_capture_cubit.dart';
 import 'package:facetest/controller/face_capture_state.dart';
+import 'package:facetest/controller/repo.dart';
 import 'package:facetest/face_pose.dart';
 import 'package:facetest/global_widgets/app_text.dart';
 import 'package:facetest/global_widgets/powered_by.dart';
@@ -15,12 +16,6 @@ import 'package:stts/stts.dart';
 
 import 'default_face_overlay.dart';
 
-/// Drop this into your app's navigation. It owns a [FaceCaptureController]
-/// internally and renders entirely through [FaceCaptureConfig]'s builders —
-/// the UI team edits the config, not this file.
-///
-/// No state-management package required — just a StatefulWidget holding a
-/// ChangeNotifier, same pattern as owning a TextEditingController.
 class FaceCaptureScreen extends StatefulWidget {
   final void Function(List<CapturedFaceImage> images)? onSuccess;
   final VoidCallback? onCancel;
@@ -31,8 +26,6 @@ class FaceCaptureScreen extends StatefulWidget {
   State<FaceCaptureScreen> createState() => _FaceCaptureScreenState();
 }
 
-/// Groups phases that share a widget tree so pose-match ticks don't rebuild
-/// the camera preview or GIF.
 enum _CaptureUi {
   initializing,
   permissionDenied,
@@ -60,8 +53,6 @@ _CaptureUi _uiFor(FaceCapturePhase phase) {
 class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   late final FaceCaptureController _controller;
 
-  // Tracks the last phase we reacted to, so side effects (like auto-submit)
-  // fire exactly once per transition instead of on every rebuild.
   FaceCapturePhase? _lastHandledPhase;
   int? _lastSpokenStepIndex;
   Timer? _firstSpeakDelay;
@@ -99,7 +90,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   }
 
   void _maybeSpeakStep() {
-    if (!_audioEnabled) return; // <-- add this guard
+    if (!Repo.isSoundOn) return;
 
     final state = _controller.state;
     final phase = state.phase;
@@ -197,7 +188,6 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       _CaptureUi.capturing => _CaptureBody(
         config: config,
         controller: _controller,
-        onSoundToggle: (on) => setState(() => _audioEnabled = on),
         onClose: () {
           widget.onCancel?.call();
           if (Navigator.of(context).canPop()) Navigator.of(context).pop();
@@ -210,12 +200,10 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 class _CaptureBody extends StatelessWidget {
   final FaceCaptureConfig config;
   final FaceCaptureController controller;
-  final ValueChanged<bool>? onSoundToggle;
   final VoidCallback? onClose;
   const _CaptureBody({
     required this.config,
     required this.controller,
-    this.onSoundToggle,
     this.onClose,
   });
 
@@ -225,13 +213,8 @@ class _CaptureBody extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         _CameraLayer(controller: controller),
-        _OverlayLayer(
-          config: config,
-          controller: controller,
-          onSoundToggle: onSoundToggle,
-          onClose: onClose,
-        ),
-        _ProgressLayer(config: config, controller: controller),
+        _OverlayLayer(config: config, controller: controller, onClose: onClose),
+        // _ProgressLayer(config: config, controller: controller),
         _InstructionLayer(config: config, controller: controller),
         DotsLayer(config: config, controller: controller),
 
@@ -282,12 +265,10 @@ class _CameraLayer extends StatelessWidget {
 class _OverlayLayer extends StatefulWidget {
   final FaceCaptureConfig config;
   final FaceCaptureController controller;
-  final ValueChanged<bool>? onSoundToggle;
   final VoidCallback? onClose;
   const _OverlayLayer({
     required this.config,
     required this.controller,
-    this.onSoundToggle,
     this.onClose,
   });
 
@@ -310,7 +291,6 @@ class _OverlayLayerState extends State<_OverlayLayer> {
             DefaultFaceOverlay(
               state: widget.controller.state,
               config: widget.config,
-              onSoundToggle: widget.onSoundToggle,
               onClose: widget.onClose,
             );
       },
@@ -409,6 +389,7 @@ class DotsLayer extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(total, (i) {
                   final active = i == currentIndex;
+                  final done = currentIndex >= i;
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 250),
                     margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -418,6 +399,8 @@ class DotsLayer extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: active
                           ? config.primaryColor
+                          : done
+                          ? SuccessColors.s500
                           : config.primaryColor.withValues(alpha: 0.25),
                     ),
                   );
@@ -436,7 +419,6 @@ class DotsLayer extends StatelessWidget {
                 ],
               ),
               SizedBox(height: 25),
-
               PoweredBy(),
             ],
           );
@@ -532,10 +514,11 @@ class _PoseGuideGifState extends State<_PoseGuideGif> {
           size: 14,
           fontWeight: FontWeight.w400,
         ),
+        SizedBox(height: 16),
         Image.asset(
           widget.assetPath,
-          width: 100,
-          height: 150,
+          width: 70,
+          height: 70,
           package: _package!.isEmpty ? null : _package,
           gaplessPlayback: true,
           excludeFromSemantics: true,

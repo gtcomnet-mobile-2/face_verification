@@ -1,4 +1,3 @@
-import 'package:facetest/constants/app_images.dart';
 import 'package:facetest/constants/color_pallet.dart';
 import 'package:facetest/global_widgets/app_text.dart';
 import 'package:flutter/material.dart';

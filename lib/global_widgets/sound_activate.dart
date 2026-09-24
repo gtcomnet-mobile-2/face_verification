@@ -1,29 +1,42 @@
 import 'package:facetest/constants/app_images.dart';
+import 'package:facetest/controller/repo.dart';
 import 'package:flutter/material.dart';
 
-class SoundActivate extends StatelessWidget {
-  const SoundActivate({super.key, this.isSound = false});
-  final bool isSound;
+class SoundActivate extends StatefulWidget {
+  const SoundActivate({super.key});
+
+  @override
+  State<SoundActivate> createState() => _SoundActivateState();
+}
+
+class _SoundActivateState extends State<SoundActivate> {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(12),
-      height: 48,
-      width: 48,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Color(0x14000000),
-            offset: Offset(0, 4),
-            blurRadius: 12,
-            spreadRadius: 0,
-          ),
-        ],
-      ),
-      child: AssetImages(
-        imgPath: isSound ? AppImages.sound : AppImages.noSound,
+    final isSound = Repo.isSoundOn;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        setState(Repo.toggleSound);
+      },
+      child: Container(
+        padding: EdgeInsets.all(12),
+        height: 48,
+        width: 48,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x14000000),
+              offset: Offset(0, 4),
+              blurRadius: 12,
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: AssetImages(
+          imgPath: isSound ? AppImages.sound : AppImages.noSound,
+        ),
       ),
     );
   }

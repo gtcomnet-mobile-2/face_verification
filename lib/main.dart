@@ -1,7 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:facetest/config/face_capture_config.dart';
-import 'package:facetest/face_capture_screen.dart';
-import 'package:facetest/face_verification_repository.dart';
 import 'package:facetest/sdk_welcome_screen.dart';
 import 'package:flutter/material.dart';
 

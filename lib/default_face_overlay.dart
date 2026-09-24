@@ -8,7 +8,7 @@ Rect faceOvalRect(Size size) {
   return Rect.fromCenter(
     center: Offset(size.width / 2, size.height * 0.559),
     width: size.width * 0.75,
-    height: size.width * 0.7,
+    height: size.width * 0.75,
   );
 }
 
@@ -20,13 +20,11 @@ Rect faceOvalRect(Size size) {
 class DefaultFaceOverlay extends StatefulWidget {
   final FaceCaptureState state;
   final FaceCaptureConfig config;
-  final ValueChanged<bool>? onSoundToggle;
   final VoidCallback? onClose;
   const DefaultFaceOverlay({
     super.key,
     required this.state,
     required this.config,
-    this.onSoundToggle,
     this.onClose,
   });
 
@@ -45,35 +43,40 @@ class _DefaultFaceOverlayState extends State<DefaultFaceOverlay> {
               ? widget.config.primaryColor
               : Colors.white70);
 
-    return IgnorePointer(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          RepaintBoundary(
-            child: CustomPaint(
-              painter: _OvalCutoutPainter(
-                backgroundColor: widget.config.overlayBackgroundColor,
-              ),
-              child: Container(
-                margin: EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  children: [
-                    TopBar(
-                      showSound: true,
-                      onSoundToggle: widget.onSoundToggle,
-                      onClose: widget.onClose,
-                    ),
-                  ],
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        IgnorePointer(
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              RepaintBoundary(
+                child: CustomPaint(
+                  painter: _OvalCutoutPainter(
+                    backgroundColor: widget.config.overlayBackgroundColor,
+                  ),
+                  child: const SizedBox.expand(),
                 ),
               ),
-            ),
+              CustomPaint(
+                painter: _OvalBorderPainter(borderColor: borderColor),
+                child: const SizedBox.expand(),
+              ),
+            ],
           ),
-          CustomPaint(
-            painter: _OvalBorderPainter(borderColor: borderColor),
-            child: const SizedBox.expand(),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Column(
+            children: [
+              TopBar(
+                showSound: true,
+                onClose: widget.onClose,
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

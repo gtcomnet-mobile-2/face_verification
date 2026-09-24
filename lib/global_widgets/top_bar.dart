@@ -9,12 +9,10 @@ class TopBar extends StatefulWidget {
   const TopBar({
     super.key,
     required this.showSound,
-    this.onSoundToggle,
     this.onClose,
   });
 
   final bool showSound;
-  final ValueChanged<bool>? onSoundToggle; // true = sound on
   final VoidCallback? onClose;
 
   @override
@@ -35,15 +33,7 @@ class _TopBarState extends State<TopBar> {
         size: 16,
       ),
       centerTitle: true,
-      leading: widget.showSound
-          ? GestureDetector(
-              onTap: () {
-                setState(() => isSoundOn = !isSoundOn);
-                widget.onSoundToggle?.call(isSoundOn);
-              },
-              child: SoundActivate(isSound: isSoundOn),
-            )
-          : null,
+      leading: widget.showSound ? SoundActivate() : null,
       automaticallyImplyLeading: false,
       backgroundColor: Colors.white,
       actions: [
