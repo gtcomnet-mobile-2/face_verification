@@ -1,6 +1,4 @@
 PODS:
-  - camera_avfoundation (0.0.1):
-    - Flutter
   - Flutter (1.0.0)
   - google_mlkit_commons (0.13.0):
     - Flutter
@@ -55,15 +53,11 @@ PODS:
   - nanopb/decode (3.30910.0)
   - nanopb/encode (3.30910.0)
   - PromisesObjC (2.4.1)
-  - stts (1.0.0):
-    - Flutter
 
 DEPENDENCIES:
-  - camera_avfoundation (from `.symlinks/plugins/camera_avfoundation/darwin`)
   - Flutter (from `Flutter`)
   - google_mlkit_commons (from `.symlinks/plugins/google_mlkit_commons/ios`)
   - google_mlkit_face_detection (from `.symlinks/plugins/google_mlkit_face_detection/ios`)
-  - stts (from `.symlinks/plugins/stts/ios`)
 
 SPEC REPOS:
   trunk:
@@ -80,19 +74,14 @@ SPEC REPOS:
     - PromisesObjC
 
 EXTERNAL SOURCES:
-  camera_avfoundation:
-    :path: ".symlinks/plugins/camera_avfoundation/darwin"
   Flutter:
     :path: Flutter
   google_mlkit_commons:
     :path: ".symlinks/plugins/google_mlkit_commons/ios"
   google_mlkit_face_detection:
     :path: ".symlinks/plugins/google_mlkit_face_detection/ios"
-  stts:
-    :path: ".symlinks/plugins/stts/ios"
 
 SPEC CHECKSUMS:
-  camera_avfoundation: 769d252259fa21e39ada7399c9dc9c0921af8165
   Flutter: 71a624a5bc0c04062bf19101d501e466baf2fb47
   google_mlkit_commons: 092da2f8e0a4a77d9a0475fd6eec56958e2b505d
   google_mlkit_face_detection: 6414bbd2ab4b682ea87794c9f9581dda9033680c
@@ -107,8 +96,7 @@ SPEC CHECKSUMS:
   MLKitVision: 39a5a812db83c4a0794445088e567f3631c11961
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: 752c3227f599e3467650e47ea36f433eeb10c273
-  stts: b3ae6827e7c3734b6ef84a525419e05475aed375
 
-PODFILE CHECKSUM: 57cd6db3038e82b24b7e9811212cf142714bfbd5
+PODFILE CHECKSUM: 08ddb3a4bfd01c1645d6fb249a9914580ddd8e58
 
 COCOAPODS: 1.16.2
