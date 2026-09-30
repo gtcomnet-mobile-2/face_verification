@@ -43,7 +43,7 @@ class DotsLayer extends StatelessWidget {
                           ? config.primaryColor
                           : done
                           ? SuccessColors.s500
-                          : config.primaryColor.withValues(alpha: 0.25),
+                          : PrimaryColors.p50,
                     ),
                   );
                 }),

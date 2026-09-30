@@ -8,6 +8,7 @@ import 'package:facetest/controller/face_capture_state.dart';
 import 'package:facetest/controller/repo.dart';
 import 'package:facetest/controller_select.dart';
 import 'package:facetest/face_pose.dart';
+import 'package:facetest/global_widgets/success_dialog.dart';
 import 'package:facetest/message.dart';
 import 'package:flutter/material.dart';
 import 'package:stts/stts.dart';
@@ -148,14 +149,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
               onRetry: () => _controller.submit(userId: userId),
             ),
       CaptureUi.uploadSuccess =>
-        config.successBuilder?.call(context) ??
-            Center(
-              child: Icon(
-                Icons.check_circle,
-                color: config.successColor,
-                size: 96,
-              ),
-            ),
+        config.successBuilder?.call(context) ?? SuccessAlert(),
       CaptureUi.capturing => CaptureBody(
         config: config,
         controller: _controller,

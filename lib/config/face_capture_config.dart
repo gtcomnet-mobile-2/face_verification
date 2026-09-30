@@ -1,3 +1,4 @@
+import 'package:facetest/constants/color_pallet.dart';
 import 'package:facetest/controller/face_capture_state.dart';
 import 'package:facetest/face_pose.dart';
 import 'package:flutter/material.dart';
@@ -86,7 +87,7 @@ class FaceCaptureConfig {
     this.smileThreshold = 0.7,
     this.holdDuration = const Duration(milliseconds: 600),
     this.autoCapture = true,
-    this.primaryColor = const Color(0xFF2E7DFF),
+    this.primaryColor = PrimaryColors.p500,
     this.successColor = const Color(0xFF34C759),
     this.errorColor = const Color(0xFFFF3B30),
     this.overlayBackgroundColor = const Color(0xFFFFFFFF),

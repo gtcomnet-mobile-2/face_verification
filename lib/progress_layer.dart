@@ -8,7 +8,7 @@ class ProgressLayer extends StatelessWidget {
   final FaceCaptureConfig config;
   final FaceCaptureController controller;
 
-  const ProgressLayer({required this.config, required this.controller});
+  const ProgressLayer({super.key, required this.config, required this.controller});
 
   @override
   Widget build(BuildContext context) {
