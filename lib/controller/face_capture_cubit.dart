@@ -48,14 +48,17 @@ class FaceCaptureController extends ChangeNotifier {
 
   static const _warmWidth = 640;
   static const _warmHeight = 480;
-  static const _maxDetectWidth = 480;
+  // Keep frames large enough for ML Kit (min ~480x360, faces >= 100px).
+  // 480px max made medium camera buffers too small after downsampling.
+  static const _maxDetectWidth = 720;
   static const _skipInitialStreamFrames = 2;
   static const _previewSettleDelay = Duration(milliseconds: 200);
 
   static FaceDetectorOptions get _detectorOptions => FaceDetectorOptions(
     enableClassification: true,
+    enableLandmarks: true,
     enableTracking: false,
-    performanceMode: FaceDetectorMode.fast,
+    performanceMode: FaceDetectorMode.accurate,
   );
 
   /// Loads camera names, pose GIFs, and the face-detection model.
@@ -324,7 +327,12 @@ class FaceCaptureController extends ChangeNotifier {
     if (_disposed) return;
 
     final detector = _sharedDetector ??= FaceDetector(options: _detectorOptions);
-    final faces = await detector.processImage(inputImage);
+    final List<Face> faces;
+    try {
+      faces = await detector.processImage(inputImage);
+    } catch (_) {
+      return;
+    }
     if (_disposed) return;
     if (faces.isEmpty) {
       _holdTimer?.cancel();
@@ -365,29 +373,33 @@ class FaceCaptureController extends ChangeNotifier {
   bool _poseMatches(Face face, FacePose pose) {
     // Positive yaw = user turned toward their left (matches Android ML Kit).
     // iOS mirrors the front-camera stream, which flips that sign.
-    var yaw = face.headEulerAngleY ?? 0;
-    if (Platform.isIOS &&
+    // Euler Y is only guaranteed in accurate mode; never treat a missing
+    // angle as 0 or left/right/straight would false-match in release.
+    var yaw = face.headEulerAngleY;
+    final pitch = face.headEulerAngleX;
+    if (yaw != null &&
+        Platform.isIOS &&
         _cameraController?.description.lensDirection ==
             CameraLensDirection.front) {
       yaw = -yaw;
     }
-    final pitch = face.headEulerAngleX ?? 0; // up/down tilt
-    final smileProb = face.smilingProbability ?? 0;
+    final smileProb = face.smilingProbability;
 
     switch (pose) {
       case FacePose.straight:
+        if (yaw == null || pitch == null) return false;
         return yaw.abs() <= config.straightYawTolerance &&
             pitch.abs() <= config.straightPitchTolerance;
       case FacePose.left:
-        return yaw >= config.yawThreshold;
+        return yaw != null && yaw >= config.yawThreshold;
       case FacePose.right:
-        return yaw <= -config.yawThreshold;
+        return yaw != null && yaw <= -config.yawThreshold;
       case FacePose.up:
-        return pitch >= config.pitchThreshold;
+        return pitch != null && pitch >= config.pitchThreshold;
       case FacePose.down:
-        return pitch <= -config.pitchThreshold;
+        return pitch != null && pitch <= -config.pitchThreshold;
       case FacePose.smile:
-        return smileProb >= config.smileThreshold;
+        return smileProb != null && smileProb >= config.smileThreshold;
     }
   }
 
@@ -509,55 +521,116 @@ class FaceCaptureController extends ChangeNotifier {
     if (camController == null) return null;
 
     try {
-      final camera = camController.description;
       final rotation =
-          InputImageRotationValue.fromRawValue(camera.sensorOrientation) ??
+          InputImageRotationValue.fromRawValue(
+            camController.description.sensorOrientation,
+          ) ??
           InputImageRotation.rotation0deg;
 
-      final format = Platform.isAndroid
-          ? InputImageFormat.nv21
-          : InputImageFormat.bgra8888;
-
-      final plane = image.planes.first;
-      late final Uint8List bytes;
-      late final int width;
-      late final int height;
-      late final int bytesPerRow;
-
-      if (!Platform.isAndroid && image.width > _maxDetectWidth) {
-        final factor = (image.width / _maxDetectWidth).ceil().clamp(1, 8);
-        width = image.width ~/ factor;
-        height = image.height ~/ factor;
-        bytesPerRow = width * 4;
-        bytes = _downsampleBgra(
-          plane.bytes,
-          image.width,
-          image.height,
-          plane.bytesPerRow,
-          factor,
-        );
-      } else {
-        bytes = Uint8List.fromList(plane.bytes);
-        width = image.width;
-        height = image.height;
-        bytesPerRow = plane.bytesPerRow;
+      if (Platform.isAndroid) {
+        return _androidInputImage(image, rotation);
       }
-
-      return InputImage.fromBytes(
-        bytes: bytes,
-        metadata: InputImageMetadata(
-          size: Size(width.toDouble(), height.toDouble()),
-          rotation: rotation,
-          format: format,
-          bytesPerRow: bytesPerRow,
-        ),
-      );
+      return _iosInputImage(image, rotation);
     } catch (_) {
       return null;
     }
   }
 
-  static Uint8List _downsampleBgra(
+  InputImage? _androidInputImage(
+    CameraImage image,
+    InputImageRotation rotation,
+  ) {
+    final bytes = _nv21Bytes(image);
+    if (bytes == null) return null;
+    return InputImage.fromBytes(
+      bytes: bytes,
+      metadata: InputImageMetadata(
+        size: Size(image.width.toDouble(), image.height.toDouble()),
+        rotation: rotation,
+        format: InputImageFormat.nv21,
+        bytesPerRow: image.width,
+      ),
+    );
+  }
+
+  InputImage? _iosInputImage(CameraImage image, InputImageRotation rotation) {
+    if (image.planes.isEmpty) return null;
+    final plane = image.planes.first;
+    final format = InputImageFormatValue.fromRawValue(image.format.raw);
+    if (format != null && format != InputImageFormat.bgra8888) {
+      return null;
+    }
+
+    var factor = 1;
+    if (image.width > _maxDetectWidth) {
+      factor = (image.width / _maxDetectWidth).ceil().clamp(1, 4);
+      // Stay above ML Kit's ~480x360 guidance after scaling.
+      if (image.height ~/ factor < 360) factor = 1;
+    }
+
+    final width = image.width ~/ factor;
+    final height = image.height ~/ factor;
+    final bytes = _copyBgraPacked(
+      plane.bytes,
+      image.width,
+      image.height,
+      plane.bytesPerRow,
+      factor,
+    );
+    return InputImage.fromBytes(
+      bytes: bytes,
+      metadata: InputImageMetadata(
+        size: Size(width.toDouble(), height.toDouble()),
+        rotation: rotation,
+        format: InputImageFormat.bgra8888,
+        bytesPerRow: width * 4,
+      ),
+    );
+  }
+
+  /// NV21 from a single-plane nv21 buffer or from YUV_420_888 planes.
+  static Uint8List? _nv21Bytes(CameraImage image) {
+    if (image.planes.isEmpty) return null;
+    if (image.planes.length == 1) {
+      return Uint8List.fromList(image.planes.first.bytes);
+    }
+    if (image.planes.length < 3) return null;
+    final yPlane = image.planes[0];
+    final uPlane = image.planes[1];
+    final vPlane = image.planes[2];
+    final width = image.width;
+    final height = image.height;
+    final ySize = width * height;
+    final out = Uint8List(ySize + ySize ~/ 2);
+
+    var yi = 0;
+    for (var row = 0; row < height; row++) {
+      final start = row * yPlane.bytesPerRow;
+      if (start + width > yPlane.bytes.length) break;
+      out.setRange(yi, yi + width, yPlane.bytes, start);
+      yi += width;
+    }
+
+    final uvWidth = width ~/ 2;
+    final uvHeight = height ~/ 2;
+    final uPixel = uPlane.bytesPerPixel ?? 1;
+    final vPixel = vPlane.bytesPerPixel ?? 1;
+    var ui = ySize;
+    for (var row = 0; row < uvHeight; row++) {
+      for (var col = 0; col < uvWidth; col++) {
+        final uIndex = row * uPlane.bytesPerRow + col * uPixel;
+        final vIndex = row * vPlane.bytesPerRow + col * vPixel;
+        if (vIndex >= vPlane.bytes.length || uIndex >= uPlane.bytes.length) {
+          return out;
+        }
+        out[ui++] = vPlane.bytes[vIndex];
+        out[ui++] = uPlane.bytes[uIndex];
+      }
+    }
+    return out;
+  }
+
+  static Uint8List _copyBgraPacked(
     Uint8List src,
     int width,
     int height,

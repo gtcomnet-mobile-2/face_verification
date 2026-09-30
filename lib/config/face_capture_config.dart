@@ -20,6 +20,7 @@ class FaceCaptureConfig {
   /// Minimum head yaw angle (degrees) to count as "turned left/right".
   /// Positive yaw is the user turning toward their left. iOS front-camera
   /// frames are mirrored, so that sign is flipped before this comparison.
+  /// ML Kit only guarantees Euler Y in accurate detector mode.
   final double yawThreshold;
 
   /// Minimum head pitch angle (degrees) to count as "up/down".
