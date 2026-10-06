@@ -155,7 +155,10 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
         controller: _controller,
         onClose: () {
           widget.onCancel?.call();
-          if (Navigator.of(context).canPop()) Navigator.of(context).pop();
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
         },
       ),
     };

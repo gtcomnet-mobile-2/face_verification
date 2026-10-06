@@ -1,4 +1,3 @@
-import 'dart:developer';
 
 import 'package:facetest/constants/color_pallet.dart';
 import 'package:facetest/global_widgets/app_text.dart';
