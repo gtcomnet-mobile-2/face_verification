@@ -1,39 +1,49 @@
 # Facetest
 
-A Flutter face verification and face capture package built with Google ML Kit.
+A Flutter face verification and face capture package built on `google_mlkit_face_detection`.
 
-`facetest` provides a ready-to-use face verification experience that guides users through different facial poses and captures their face while performing real-time face detection.
+`facetest` provides a ready-to-use verification experience that guides users through a series of facial poses and captures their face while performing real-time face detection. It is suited to identity verification, KYC onboarding, biometric authentication, user registration, and any flow that needs face-based verification.
 
-The package can be used for identity verification, KYC onboarding, biometric authentication flows, user registration, and other applications that require face-based verification.
+## Table of Contents
+
+- [Facetest](#facetest)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [How It Works](#how-it-works)
+  - [Platform Support](#platform-support)
+  - [Requirements](#requirements)
+  - [Installation](#installation)
+  - [Platform Setup](#platform-setup)
+    - [Android](#android)
+    - [iOS](#ios)
+    - [Handling Permissions (Android and iOS)](#handling-permissions-android-and-ios)
+  - [Usage](#usage)
 
 ## Features
 
-* Real-time face detection using Google ML Kit.
-* Face positioning and alignment guidance.
-* Face pose detection.
-* Supports multiple facial actions and directions:
+- Real-time face detection using Google ML Kit
+- Face positioning and alignment guidance
+- Face pose detection
+- Multiple facial actions and directions:
+  - Look straight at the camera
+  - Look left
+  - Look right
+  - Look up
+  - Look down
+  - Smile
+- Visual instructions to guide users during verification
+- Face capture and verification flow
+- Customizable face capture configuration
+- Custom face verification UI components
+- Progress indication during verification
+- Success and error states
+- Optional sound instructions
+- Customizable colors and UI components
+- Android and iOS support
 
-  * Look straight at the camera.
-  * Look left.
-  * Look right.
-  * Look up.
-  * Look down.
-  * Smile.
-* Visual instructions to guide users during verification.
-* Face capture and verification flow.
-* Customizable face capture configuration.
-* Custom face verification UI components.
-* Progress indication during the verification process.
-* Success and error states.
-* Optional sound instructions.
-* Support for Android and iOS.
-* Customizable colors and UI components.
+## How It Works
 
-## How Face Verification Works
-
-The package guides the user through a sequence of facial instructions.
-
-For example:
+The package guides the user through a sequence of facial instructions, for example:
 
 1. Position your face inside the guide.
 2. Look directly at the camera.
@@ -44,50 +54,52 @@ For example:
 7. Smile.
 8. Complete the verification.
 
-The package uses Google ML Kit's face detection capabilities to detect the user's face and determine whether the required facial pose or action has been performed.
+It uses Google ML Kit's face detection to find the user's face and determine whether the required pose or action has been performed.
 
----
+## Platform Support
+
+| Platform | Supported |
+| -------- | --------- |
+| Android  | ✅ Yes    |
+| iOS      | ✅ Yes    |
+
+## Requirements
+
+- Flutter and Dart
+- An Android or iOS device with a working camera
+- Camera permission granted by the user
+- Google ML Kit Face Detection support
 
 ## Installation
 
-Add `facetest` to your Flutter application's `pubspec.yaml`:
+Add `facetest` to your app's `pubspec.yaml`:
 
 ```yaml
 dependencies:
   facetest: ^1.0.0+1
 ```
 
-Then run:
+Install the package:
 
 ```bash
 flutter pub get
 ```
 
-Import the package:
+Import it:
 
 ```dart
 import 'package:facetest/facetest.dart';
 ```
 
----
+## Platform Setup
 
-## Camera Permissions
-
-`facetest` requires access to the device camera to perform face detection, face capture, and face verification.
-
-The application using this package must request and obtain camera permission before starting the face verification process.
+`facetest` needs camera access to perform face detection, capture, and verification. Your app must declare the camera permission on each platform and request it at runtime before starting the verification flow.
 
 ### Android
 
-Add the following camera permission to:
+**1. Add the camera permission**
 
-`android/app/src/main/AndroidManifest.xml`
-
-```xml
-<uses-permission android:name="android.permission.CAMERA" />
-```
-
-For example:
+In `android/app/src/main/AndroidManifest.xml`:
 
 ```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
@@ -102,137 +114,86 @@ For example:
         <!-- Your application configuration -->
 
     </application>
-
 </manifest>
+```
+
+**2. Configure ProGuard / R8 for release builds**
+
+ML Kit face detection uses reflection, and R8 may strip the classes it needs. If detection works in debug mode but fails in release mode, add the rules below.
+
+Create `android/app/proguard-rules.pro` and paste in:
+
+```proguard
+# ML Kit Face Detection uses reflection; R8 may strip required classes in release builds.
+-keep class com.google.mlkit.** { *; }
+-keep class com.google.android.gms.internal.mlkit_vision_face.** { *; }
+-keep class com.google.android.gms.internal.mlkit_vision_common.** { *; }
+-keep class com.google.android.gms.internal.mlkit_common.** { *; }
+
+-dontwarn com.google.mlkit.**
+-dontwarn com.google.android.gms.**
+```
+
+**3. Reference the rules in Gradle**
+
+In `android/app/build.gradle.kts`:
+
+```kotlin
+android {
+    buildTypes {
+        release {
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so `flutter run --release` works.
+            signingConfig = signingConfigs.getByNam## Use Cases
+
+- KYC and identity verification
+- User onboarding and account registration
+- Biometric authentication
+- Customer verification
+- Financial applications
+- Healthcare applications
+- Any application requiring face-based verificatione("debug")
+
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
+        }
+    }
+}
 ```
 
 ### iOS
 
-Add the camera usage description to:
-
-`ios/Runner/Info.plist`
-
-```xml
-<key>NSCameraUsageDescription</key>
-<string>This app requires camera access to perform face verification.</string>
-```
-
-For example:
+Add the camera usage description to `ios/Runner/Info.plist`:
 
 ```xml
 <dict>
-
     <key>NSCameraUsageDescription</key>
     <string>This app requires camera access to perform face verification.</string>
 
     <!-- Other application configuration -->
-
 </dict>
 ```
 
-### Permission Requirement
+### Handling Permissions (Android and iOS)
 
-The user must grant camera permission before using the face verification feature.
-
-If camera permission is denied, the face verification process cannot be completed.
-
-Your application should handle the permission state appropriately and, if necessary, guide the user to the device settings to enable camera access.
-
----
-
-## Android Release Build / ProGuard
-
-If you encounter issues when building your application in **release mode**, particularly when ML Kit face detection works in debug mode but fails in release mode, you may need to add the following ProGuard/R8 rules.
-
-Add these rules to your Android ProGuard configuration:
-
-```proguard
-# ML Kit Face Detection uses reflection; R8 may strip required classes in release builds.
-
--keep class com.google.mlkit.** { *; }
-
--keep class com.google.android.gms.internal.mlkit_vision_face.** { *; }
-
--keep class com.google.android.gms.internal.mlkit_vision_common.** { *; }
-
--keep class com.google.android.gms.internal.mlkit_common.** { *; }
-
--dontwarn com.google.mlkit.**
-
--dontwarn com.google.android.gms.**
-```
-
-These rules help prevent R8 from removing ML Kit classes that may be required at runtime.
-
----
+- The user must grant camera permission before verification can start.
+- If permission is denied, the verification process cannot be completed.
+- Your app should handle each permission state, and where needed guide the user to device settings to enable camera access.
 
 ## Usage
 
-After installing the package and configuring camera permissions, you can use `facetest` in your Flutter application to start the face verification flow.
+After installing the package and configuring camera permissions, use `facetest` in your app to start the face verification flow.
 
-Refer to the package API and example application for the available configuration options and customization.
+Refer to the package API documentation and the example application for available configuration options and customization.
 
----
+<!-- ## Use Cases
 
-## Platform Support
-
-| Platform | Supported |
-| -------- | --------- |
-| Android  | ✅ Yes     |
-| iOS      | ✅ Yes     |
-
----
-
-## Requirements
-
-* Flutter
-* Dart
-* Android or iOS device with a working camera
-* Camera permission
-* Google ML Kit Face Detection support
-
----
-
-## Use Cases
-
-`facetest` can be used for:
-
-* KYC and identity verification.
-* User onboarding.
-* Biometric authentication.
-* Account registration.
-* Customer verification.
-* Financial applications.
-* Healthcare applications.
-* Access control systems.
-* Any application requiring face-based verification.
-
----
-
-## License
-
-This package is provided for use according to the license specified in the package repository.
-
-````
-
-### One thing I recommend before publishing
-
-Your README says:
-
-> "The application using this package must request and obtain camera permission"
-
-That is correct **if your package does not request permission itself**.
-
-If `facetest` already requests camera permission internally, we should change that wording because users shouldn't be told to implement something your package already handles.
-
-Also, after updating the README, run:
-
-```bash
-dart pub publish --dry-run
-````
-
-If it says **0 warnings**, then:
-
-```bash
-dart pub publish
-```
+- KYC and identity verification
+- User onboarding and account registration
+- Biometric authentication
+- Customer verification
+- Financial applications
+- Healthcare applications
+- Any application requiring face-based verification -->
